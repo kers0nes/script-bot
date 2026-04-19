@@ -1,0 +1,99 @@
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
+});
+
+// ONLY ONE TOKEN DECLARATION - using Render environment variable
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+
+// Your Roblox scripts
+const scripts = [
+    {
+        name: "Auto Farm Script",
+        description: "Automatically farms resources",
+        code: `-- Auto Farm Script
+local player = game.Players.LocalPlayer
+while wait(0.5) do
+    print('Farming...')
+end`,
+        game: "Various Games",
+        type: "Farming"
+    },
+    {
+        name: "Teleport Script",
+        description: "Teleports to click location",
+        code: `-- Teleport Script
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+
+mouse.Button1Down:Connect(function()
+    local target = mouse.Hit.p
+    player.Character.HumanoidRootPart.CFrame = CFrame.new(target)
+end)`,
+        game: "Universal",
+        type: "Movement"
+    }
+];
+
+client.once('ready', () => {
+    console.log(`✅ ${client.user.tag} is online!`);
+    console.log(`📜 Loaded ${scripts.length} scripts`);
+    client.user.setActivity('!scripts', { type: 'WATCHING' });
+});
+
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+    if (!message.content.startsWith('!')) return;
+
+    const args = message.content.slice(1).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+
+    if (command === 'scripts') {
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2)
+            .setTitle('📜 Roblox Scripts')
+            .setDescription('Use `!get 1` to get a script');
+
+        scripts.forEach((script, index) => {
+            embed.addFields({
+                name: `${index + 1}. ${script.name}`,
+                value: `${script.description}\n🎮 ${script.game}`,
+                inline: false
+            });
+        });
+
+        await message.channel.send({ embeds: [embed] });
+        return;
+    }
+
+    if (command === 'get') {
+        const num = parseInt(args[0]) - 1;
+        if (isNaN(num) || !scripts[num]) {
+            return message.reply('❌ Invalid number! Use `!scripts` to see available scripts.');
+        }
+
+        const script = scripts[num];
+        const embed = new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle(`📝 ${script.name}`)
+            .setDescription(script.description)
+            .addFields(
+                { name: '🎮 Game', value: script.game, inline: true },
+                { name: '📂 Type', value: script.type, inline: true },
+                { name: '💻 Code', value: `\`\`\`lua\n${script.code}\n\`\`\`` }
+            );
+
+        await message.channel.send({ embeds: [embed] });
+        return;
+    }
+});
+
+// ONLY ONE login call
+client.login(DISCORD_TOKEN).catch(error => {
+    console.error('❌ Login failed:', error.message);
+});
